@@ -369,6 +369,120 @@
     opacity: 0.4; transition: opacity 0.15s;
   }
   .comment-sheet-post.active { opacity: 1; }
+
+  /* ── 비하인드 스토리 뷰어 ── */
+  .story-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    background: #000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .story-overlay.open { display: flex; }
+  .story-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 12px 16px 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+  }
+  .story-progress-bar {
+    flex: 1; height: 2px; background: rgba(255,255,255,0.35); border-radius: 2px;
+  }
+  .story-progress-bar .fill { height: 100%; background: #fff; border-radius: 2px; width: 0%; transition: width 5s linear; }
+  .story-header {
+    position: absolute;
+    top: 24px; left: 0; right: 0;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+  }
+  .story-avatar {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px solid #b09fff;
+    background: linear-gradient(135deg, #1a0f35, #0d1a30);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #b09fff;
+    flex-shrink: 0;
+  }
+  .story-user { font-size: 14px; font-weight: 600; color: #fff; }
+  .story-time { font-size: 12px; color: rgba(255,255,255,0.6); margin-left: 4px; }
+  .story-close {
+    margin-left: auto; background: none; border: none;
+    color: #fff; font-size: 24px; cursor: pointer; line-height: 1;
+  }
+  .story-content {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 80px 20px 100px;
+    position: relative;
+  }
+  .story-image {
+    max-width: 100%; max-height: 60vh;
+    object-fit: contain; border-radius: 12px;
+    display: none;
+  }
+  .story-image.show { display: block; }
+  .story-qa-box {
+    width: 100%; max-width: 380px;
+  }
+  .story-question-box {
+    background: rgba(255,255,255,0.12);
+    border-radius: 14px 14px 4px 14px;
+    padding: 16px 20px;
+    font-size: 15px; color: #fff;
+    margin-bottom: 8px;
+    font-style: italic;
+    text-align: center;
+  }
+  .story-answer-box {
+    background: #fff;
+    border-radius: 4px 14px 14px 14px;
+    padding: 18px 20px;
+    font-size: 17px; font-weight: 700; color: #111;
+    text-align: center;
+  }
+  .story-text-big {
+    font-size: 28px; font-weight: 800; color: #fff;
+    text-align: center; line-height: 1.3;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+  }
+  .story-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 16px;
+    display: flex; gap: 12px; align-items: center;
+  }
+  .story-reply-input {
+    flex: 1; background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.5);
+    border-radius: 24px; padding: 10px 16px;
+    color: #fff; font-size: 14px; outline: none;
+  }
+  .story-reply-input::placeholder { color: rgba(255,255,255,0.5); }
+  .story-send-btn {
+    background: none; border: none; color: #fff; font-size: 22px; cursor: pointer;
+  }
+  .story-upload-label {
+    display: block; text-align: center; margin-top: 16px;
+    color: rgba(255,255,255,0.5); font-size: 13px; cursor: pointer;
+  }
+  .story-upload-input { display: none; }
+  .story-nav-left, .story-nav-right {
+    position: absolute; top: 0; bottom: 0; width: 40%;
+    z-index: 5; cursor: pointer;
+  }
+  .story-nav-left { left: 0; }
+  .story-nav-right { right: 0; }
+
 </style>
 </head>
 <body>
@@ -432,7 +546,7 @@
     <div class="highlight-ring"><div class="highlight-inner" style="padding:0;overflow:hidden;"><img src="images/music_cover.jpg" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"></div></div>
     <span class="highlight-label">음악</span>
   </div>
-  <div class="highlight-item">
+  <div class="highlight-item" onclick="openBehindStory()" style="cursor:pointer;">
     <div class="highlight-ring"><div class="highlight-inner">🌙</div></div>
     <span class="highlight-label">비하인드</span>
   </div>
@@ -662,6 +776,22 @@ async function submitSheetComment() {
   }
 }
 
+
+function closeCommentSheet(e) {
+  if (e && e.target !== document.getElementById('commentSheet')) return;
+  var sheet = document.getElementById('commentSheet');
+  sheet.classList.remove('open');
+  document.body.style.overflow = '';
+  var inp = document.getElementById('sheetInput');
+  if (inp) { inp.value = ''; }
+  var btn = document.getElementById('sheetPostBtn');
+  if (btn) btn.classList.remove('active');
+}
+function toggleSheetPost() {
+  var v = document.getElementById('sheetInput').value.trim();
+  document.getElementById('sheetPostBtn').classList.toggle('active', v.length > 0);
+}
+
 // ── 시트 열기 (Supabase 댓글 포함) ──
 function openCommentSheet(id) {
   _currentSheetPostId = id;
@@ -679,6 +809,154 @@ function openCommentSheet(id) {
     list.scrollTop = list.scrollHeight;
     document.getElementById('sheetInput').focus();
   }, 350);
+}
+</script>
+
+
+<!-- ── 비하인드 스토리 뷰어 ── -->
+<div class="story-overlay" id="behindStory">
+  <div class="story-nav-left" onclick="prevStory()"></div>
+  <div class="story-nav-right" onclick="nextStory()"></div>
+
+  <!-- 진행바 -->
+  <div class="story-top" id="storyProgressWrap"></div>
+
+  <!-- 헤더 -->
+  <div class="story-header">
+    <div class="story-avatar">AU</div>
+    <div>
+      <span class="story-user">AURAofficial</span>
+      <span class="story-time">비하인드</span>
+    </div>
+    <button class="story-close" onclick="closeBehindStory()">✕</button>
+  </div>
+
+  <!-- 콘텐츠 -->
+  <div class="story-content" id="storyContent"></div>
+
+  <!-- 하단 입력 -->
+  <div class="story-bottom">
+    <input class="story-reply-input" id="storyReplyInput" type="text" placeholder="메시지 보내기...">
+    <button class="story-send-btn">➤</button>
+  </div>
+</div>
+
+<script>
+// ── 비하인드 스토리 ──
+var _storyIdx = 0;
+var _storyTimer = null;
+var _userBehindPhoto = null; // 유저가 올린 사진
+
+var _stories = [
+  {
+    type: 'qa',
+    question: '캐나다에서 가장 기억에 남는 일은?',
+    answer: '경찰이랑 추격전'
+  },
+  {
+    type: 'qa',
+    question: '멤버 중에 제일 잠 많이 자는 사람은?',
+    answer: '도현... 어제도 연습 중에 잠들었음'
+  },
+  {
+    type: 'qa',
+    question: '다음 앨범 콘셉트 힌트 줘요!',
+    answer: '🌙 ...다크? 아닌가 모르겠다 헿'
+  },
+  {
+    type: 'text',
+    text: '오늘 연습 끝 🎸\n고생했어요 다들 💜',
+  },
+  {
+    type: 'user_photo', // 유저 업로드 슬라이드
+    placeholder: true
+  }
+];
+
+function openBehindStory() {
+  _storyIdx = 0;
+  document.getElementById('behindStory').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderStory();
+}
+
+function closeBehindStory() {
+  document.getElementById('behindStory').classList.remove('open');
+  document.body.style.overflow = '';
+  if (_storyTimer) { clearTimeout(_storyTimer); _storyTimer = null; }
+}
+
+function nextStory() {
+  if (_storyIdx < _stories.length - 1) { _storyIdx++; renderStory(); }
+  else closeBehindStory();
+}
+function prevStory() {
+  if (_storyIdx > 0) { _storyIdx--; renderStory(); }
+}
+
+function renderStory() {
+  if (_storyTimer) { clearTimeout(_storyTimer); _storyTimer = null; }
+
+  var s = _stories[_storyIdx];
+  var content = document.getElementById('storyContent');
+
+  // 진행바 렌더
+  var wrap = document.getElementById('storyProgressWrap');
+  wrap.innerHTML = '';
+  _stories.forEach(function(_, i) {
+    var bar = document.createElement('div');
+    bar.className = 'story-progress-bar';
+    var fill = document.createElement('div');
+    fill.className = 'fill';
+    if (i < _storyIdx) fill.style.width = '100%';
+    bar.appendChild(fill);
+    wrap.appendChild(bar);
+  });
+
+  // 콘텐츠 렌더
+  if (s.type === 'qa') {
+    content.innerHTML =
+      '<div class="story-qa-box">' +
+        '<div class="story-question-box">Go \'head, ask me somethin\'<br><br>' + s.question + '</div>' +
+        '<div class="story-answer-box">' + s.answer + '</div>' +
+      '</div>';
+  } else if (s.type === 'text') {
+    content.innerHTML = '<div class="story-text-big">' + s.text.replace(/\n/g, '<br>') + '</div>';
+  } else if (s.type === 'user_photo') {
+    if (_userBehindPhoto) {
+      content.innerHTML = '<img src="' + _userBehindPhoto + '" style="max-width:100%;max-height:65vh;object-fit:contain;border-radius:12px;">';
+    } else {
+      content.innerHTML =
+        '<div style="text-align:center;">' +
+          '<div style="font-size:48px;margin-bottom:16px;">📸</div>' +
+          '<div style="color:#fff;font-size:16px;font-weight:600;margin-bottom:8px;">비하인드 사진 올리기</div>' +
+          '<div style="color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:24px;">팬 여러분이 보내주신 사진이 여기 나와요!</div>' +
+          '<label style="background:#b09fff;color:#000;font-weight:700;padding:12px 28px;border-radius:24px;cursor:pointer;font-size:14px;">' +
+            '사진 선택하기' +
+            '<input type="file" accept="image/*" style="display:none;" onchange="uploadBehindPhoto(this)">' +
+          '</label>' +
+        '</div>';
+    }
+  }
+
+  // 5초 후 다음으로
+  _storyTimer = setTimeout(function() { nextStory(); }, 5000);
+
+  // 현재 진행바 애니메이션
+  setTimeout(function() {
+    var bars = wrap.querySelectorAll('.fill');
+    if (bars[_storyIdx]) bars[_storyIdx].style.width = '100%';
+  }, 50);
+}
+
+function uploadBehindPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _userBehindPhoto = e.target.result;
+    renderStory(); // 사진 올라오면 바로 보여주기
+  };
+  reader.readAsDataURL(input.files[0]);
 }
 </script>
 
